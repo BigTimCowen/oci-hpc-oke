@@ -299,62 +299,53 @@ resource "terraform_data" "wait_for_non_gpu_workers" {
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
-    command     = <<-EOT
-      set -euo pipefail
-
-      export PATH="$PATH:/usr/local/bin"
-      export PYTHONWARNINGS="ignore:the 'strict' parameter::urllib3.poolmanager"
-
-      if [ -n "${self.input.oci_auth}" ]; then
-        export OCI_CLI_AUTH="${self.input.oci_auth}"
-      fi
-
-      profile="${self.input.profile}"
-      region="${self.input.region}"
-      timeout_secs="${self.input.wait_timeout_secs}"
-      poll_interval_secs="${self.input.poll_interval_secs}"
-      pool_ids="${self.input.worker_pool_ids}"
-
-      if [ -z "$pool_ids" ]; then
-        echo "No non-GPU worker pools were found for add-on gating."
-        exit 1
-      fi
-
-      profile_args=()
-      if [ -n "$profile" ]; then
-        profile_args=(--profile "$profile")
-      fi
-
-      deadline=$((SECONDS + timeout_secs))
-      while [ "$SECONDS" -lt "$deadline" ]; do
-        active_nodes=0
-
-        for pool_id in $pool_ids; do
-          count=$(
-            oci ce node-pool get \
-              --node-pool-id "$pool_id" \
-              --region "$region" \
-              "$${profile_args[@]}" \
-              2>/dev/null | \
-              python3 -c 'import json, sys; data = json.load(sys.stdin).get("data", {}); print(sum(1 for node in data.get("nodes", []) if node.get("lifecycle-state") == "ACTIVE"))' \
-              || echo 0
-          )
-
-          active_nodes=$((active_nodes + count))
-        done
-
-        if [ "$active_nodes" -gt 0 ]; then
-          echo "Detected $active_nodes ACTIVE non-GPU worker node(s)."
-          exit 0
-        fi
-
-        echo "Waiting for at least one ACTIVE non-GPU worker node..."
-        sleep "$poll_interval_secs"
-      done
-
-      echo "Timed out waiting for an ACTIVE node in the system/CPU worker pools." >&2
-      exit 1
-    EOT
+    command = join("\n", [
+      "set -euo pipefail",
+      "",
+      "export PATH=\"$PATH:/usr/local/bin\"",
+      "export PYTHONWARNINGS=\"ignore:the 'strict' parameter::urllib3.poolmanager\"",
+      "",
+      "if [ -n \"${self.input.oci_auth}\" ]; then",
+      "  export OCI_CLI_AUTH=\"${self.input.oci_auth}\"",
+      "fi",
+      "",
+      "profile=\"${self.input.profile}\"",
+      "region=\"${self.input.region}\"",
+      "timeout_secs=\"${self.input.wait_timeout_secs}\"",
+      "poll_interval_secs=\"${self.input.poll_interval_secs}\"",
+      "pool_ids=\"${self.input.worker_pool_ids}\"",
+      "",
+      "if [ -z \"$pool_ids\" ]; then",
+      "  echo \"No non-GPU worker pools were found for add-on gating.\"",
+      "  exit 1",
+      "fi",
+      "",
+      "profile_args=()",
+      "if [ -n \"$profile\" ]; then",
+      "  profile_args=(--profile \"$profile\")",
+      "fi",
+      "",
+      "deadline=$((SECONDS + timeout_secs))",
+      "while [ \"$SECONDS\" -lt \"$deadline\" ]; do",
+      "  active_nodes=0",
+      "",
+      "  for pool_id in $pool_ids; do",
+      "    count=$(oci ce node-pool get --node-pool-id \"$pool_id\" --region \"$region\" \"$${profile_args[@]}\" 2>/dev/null | python3 -c 'import json, sys; data = json.load(sys.stdin).get(\"data\", {}); print(sum(1 for node in data.get(\"nodes\", []) if node.get(\"lifecycle-state\") == \"ACTIVE\"))' || echo 0)",
+      "    active_nodes=$((active_nodes + count))",
+      "  done",
+      "",
+      "  if [ \"$active_nodes\" -gt 0 ]; then",
+      "    echo \"Detected $active_nodes ACTIVE non-GPU worker node(s).\"",
+      "    exit 0",
+      "  fi",
+      "",
+      "  echo \"Waiting for at least one ACTIVE non-GPU worker node...\"",
+      "  sleep \"$poll_interval_secs\"",
+      "done",
+      "",
+      "echo \"Timed out waiting for an ACTIVE node in the system/CPU worker pools.\" >&2",
+      "exit 1",
+    ])
   }
 
   depends_on = [module.oke]
