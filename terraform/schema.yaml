@@ -127,7 +127,6 @@ variableGroups:
       - public_subnet_route_table
 
   - title: Cluster Access
-    visible: create_cluster
     variables:
       - ssh_public_key
       - create_bastion

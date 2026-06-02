@@ -8,8 +8,8 @@ data "oci_containerengine_clusters" "oke" {
 locals {
 
   create_cluster             = var.create_cluster
-  create_bastion             = local.create_cluster && var.create_bastion
-  create_operator            = local.create_cluster && var.create_operator
+  create_bastion             = var.create_bastion
+  create_operator            = var.create_operator
   create_oci_bastion_service = local.create_cluster && var.create_oci_bastion_service
   create_fss                 = local.create_cluster && var.create_fss
   create_lustre              = local.create_cluster && var.create_lustre
