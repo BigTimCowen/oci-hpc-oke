@@ -31,11 +31,10 @@ data "cloudinit_config" "operator" {
       packages = compact([
         "git",
         "jq",
-        "python3-oci-cli",
+        var.install_oci_cli_from_repo ? null : "python3-oci-cli",
         "golang",
-        var.install_helm ? "helm" : null,
+        var.install_helm && !var.install_helm_from_repo ? "helm" : null,
         var.install_istioctl ? "istio-istioctl" : null,
-        var.install_kubectl_from_repo ? "kubectl" : null,
       ])
       yum_repos = {
         "${local.developer_EPEL}" = {
