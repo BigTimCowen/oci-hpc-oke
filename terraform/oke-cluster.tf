@@ -65,6 +65,7 @@ locals {
   cluster_id        = local.create_cluster ? module.oke.cluster_id : null
   cluster_apiserver = local.create_cluster ? try(trimspace(module.oke.apiserver_private_host), "") : ""
   cluster_name      = format("%v-%v", var.cluster_name, local.state_id)
+  worker_pool_ids   = local.create_cluster ? coalesce(module.oke.worker_pool_ids, {}) : {}
 
   kube_exec_args = local.create_cluster ? concat(
     ["--region", var.region],

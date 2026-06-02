@@ -92,10 +92,10 @@ output "lustre_mount_path" { value = var.lustre_mount_path }
 output "worker_subnet_id" { value = module.oke.worker_subnet_id }
 output "worker_nsg_id" { value = module.oke.worker_nsg_id }
 output "worker_subnet_cidr" { value = module.oke.worker_subnet_cidr }
-output "worker_ops_pool_id" { value = lookup(module.oke.worker_pool_ids, "oke-system", null) }
-output "worker_cpu_pool_id" { value = lookup(module.oke.worker_pool_ids, "oke-cpu", null) }
-output "worker_gpu_pool_id" { value = lookup(module.oke.worker_pool_ids, "oke-gpu", null) }
-output "worker_rdma_pool_id" { value = lookup(module.oke.worker_pool_ids, "oke-rdma", null) }
+output "worker_ops_pool_id" { value = lookup(local.worker_pool_ids, "oke-system", null) }
+output "worker_cpu_pool_id" { value = lookup(local.worker_pool_ids, "oke-cpu", null) }
+output "worker_gpu_pool_id" { value = lookup(local.worker_pool_ids, "oke-gpu", null) }
+output "worker_rdma_pool_id" { value = lookup(local.worker_pool_ids, "oke-rdma", null) }
 
 # Monitoring
 output "grafana_fetch_endpoint_command" {

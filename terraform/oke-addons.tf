@@ -127,8 +127,8 @@ locals {
   ])
 
   managed_addon_non_gpu_pool_ids = compact([
-    lookup(module.oke.worker_pool_ids, "oke-system", null),
-    var.worker_cpu_enabled ? lookup(module.oke.worker_pool_ids, "oke-cpu", null) : null,
+    lookup(local.worker_pool_ids, "oke-system", null),
+    var.worker_cpu_enabled ? lookup(local.worker_pool_ids, "oke-cpu", null) : null,
   ])
 
   nvidia_gpu_operator_addon_configurations = [

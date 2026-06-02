@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 locals {
-  oke_private_endpoint_ip = trimsuffix(trimprefix(local.cluster_private_endpoint, "https://"), ":6443")
+  oke_private_endpoint_ip = local.create_oci_bastion_service ? trimsuffix(trimprefix(local.cluster_private_endpoint, "https://"), ":6443") : ""
   workers_subnet_cidr = (local.create_oci_bastion_service && var.bastion_service_allow_worker_ssh ?
     (var.custom_subnet_ids ?
       one(data.oci_core_subnet.workers_bastion_svc[*].cidr_block) :
