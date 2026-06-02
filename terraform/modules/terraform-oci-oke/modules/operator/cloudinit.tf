@@ -111,6 +111,7 @@ data "cloudinit_config" "operator" {
         runcmd = [
           "curl -LO https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh",
           "su -c 'bash /install.sh --accept-all-defaults' - ${var.user}",
+          "ln -sf /home/${var.user}/bin/oci /usr/local/bin/oci",
         ]
       })
       filename   = "20-oci_cli_from_repo.yml"
