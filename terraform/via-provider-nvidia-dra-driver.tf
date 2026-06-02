@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 resource "helm_release" "nvidia_dra_driver" {
-  count = alltrue([var.install_nvidia_dra_driver, var.worker_gmc_enabled, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
+  count = alltrue([local.install_nvidia_dra_driver, var.worker_gmc_enabled, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
   depends_on = [
     module.oke,
     kubectl_manifest.cert_manager_webhook_probe,

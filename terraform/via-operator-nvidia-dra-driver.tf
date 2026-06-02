@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 module "nvidia_dra_driver" {
-  count  = alltrue([var.install_nvidia_dra_driver, var.worker_gmc_enabled, local.deploy_from_operator]) ? 1 : 0
+  count  = alltrue([local.install_nvidia_dra_driver, var.worker_gmc_enabled, local.deploy_from_operator]) ? 1 : 0
   source = "./helm-module"
 
   bastion_host    = module.oke.bastion_public_ip

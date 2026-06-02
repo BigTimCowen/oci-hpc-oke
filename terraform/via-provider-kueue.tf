@@ -10,7 +10,7 @@ locals {
 }
 
 resource "helm_release" "kueue" {
-  count = alltrue([var.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
+  count = alltrue([local.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
   depends_on = [
     module.oke,
     kubectl_manifest.cert_manager_webhook_probe,
@@ -27,7 +27,7 @@ resource "helm_release" "kueue" {
 }
 
 resource "kubectl_manifest" "kueue_webhook_probe" {
-  count = alltrue([var.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
+  count = alltrue([local.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
 
   # Apply a harmless Kueue resource first so kubectl provider retries absorb
   # webhook CA propagation races before the real Kueue objects are created.
@@ -37,7 +37,7 @@ resource "kubectl_manifest" "kueue_webhook_probe" {
 
 # Kueue Topology for RDMA-aware scheduling
 resource "kubectl_manifest" "kueue_topology" {
-  count = alltrue([var.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
+  count = alltrue([local.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
 
   yaml_body  = file("${path.module}/files/kueue/topology.yaml")
   depends_on = [helm_release.kueue, kubectl_manifest.kueue_webhook_probe]
@@ -45,7 +45,7 @@ resource "kubectl_manifest" "kueue_topology" {
 
 # ResourceFlavor matching the active GPU worker pool shape
 resource "kubectl_manifest" "kueue_resource_flavor" {
-  count = alltrue([var.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
+  count = alltrue([local.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
 
   yaml_body = templatefile("${path.module}/files/kueue/resource-flavor.yaml.tpl", {
     flavor_name   = local.kueue_flavor_name
@@ -58,7 +58,7 @@ resource "kubectl_manifest" "kueue_resource_flavor" {
 
 # ClusterQueue with resource quotas
 resource "kubectl_manifest" "kueue_cluster_queue" {
-  count = alltrue([var.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
+  count = alltrue([local.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
 
   yaml_body = templatefile("${path.module}/files/kueue/cluster-queue.yaml.tpl", {
     flavor_name  = local.kueue_flavor_name
@@ -70,7 +70,7 @@ resource "kubectl_manifest" "kueue_cluster_queue" {
 
 # LocalQueue in the user-specified namespace
 resource "kubectl_manifest" "kueue_local_queue" {
-  count = alltrue([var.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
+  count = alltrue([local.install_kueue, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
 
   yaml_body = templatefile("${path.module}/files/kueue/local-queue.yaml.tpl", {
     flavor_name = local.kueue_flavor_name

@@ -6,7 +6,7 @@ data "kubectl_file_documents" "mpi_operator" {
 }
 
 resource "kubectl_manifest" "mpi_operator" {
-  for_each = alltrue([var.install_mpi_operator, local.deploy_from_local || local.deploy_from_orm]) ? data.kubectl_file_documents.mpi_operator.manifests : {}
+  for_each = alltrue([local.install_mpi_operator, local.deploy_from_local || local.deploy_from_orm]) ? data.kubectl_file_documents.mpi_operator.manifests : {}
 
   yaml_body         = each.value
   server_side_apply = true

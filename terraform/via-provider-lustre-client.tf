@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 resource "kubectl_manifest" "lustre_pv" {
-  count = alltrue([var.create_lustre, var.create_lustre_pv, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
+  count = alltrue([local.create_lustre_pv, local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
 
   depends_on = [
     module.oke,

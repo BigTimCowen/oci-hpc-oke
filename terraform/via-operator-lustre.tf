@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 resource "null_resource" "lustre_pv_via_operator" {
-  count = alltrue([var.create_lustre, var.create_lustre_pv, local.deploy_from_operator]) ? 1 : 0
+  count = alltrue([local.create_lustre_pv, local.deploy_from_operator]) ? 1 : 0
 
   triggers = {
     lustre_ip       = one(oci_lustre_file_storage_lustre_file_system.lustre.*.management_service_address)

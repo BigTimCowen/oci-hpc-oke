@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 resource "oci_streaming_stream" "oci_metrics_exporter" {
-  count = alltrue([var.install_monitoring, var.setup_oci_metrics_exporter, var.install_node_problem_detector_kube_prometheus_stack]) ? 1 : 0
+  count = local.setup_oci_metrics_exporter ? 1 : 0
 
   name = "oci-metrics-exporter-stream-${local.state_id}"
 
@@ -18,7 +18,7 @@ resource "oci_streaming_stream" "oci_metrics_exporter" {
 
 
 resource "oci_sch_service_connector" "oci_metrics_exporter" {
-  count = alltrue([var.install_monitoring, var.setup_oci_metrics_exporter, var.install_node_problem_detector_kube_prometheus_stack]) ? 1 : 0
+  count = local.setup_oci_metrics_exporter ? 1 : 0
 
   compartment_id = var.compartment_ocid
   display_name   = "oci-metrics-exporter-${local.state_id}"

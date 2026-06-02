@@ -3,21 +3,21 @@
 
 locals {
   oke_private_endpoint_ip = trimsuffix(trimprefix(local.cluster_private_endpoint, "https://"), ":6443")
-  workers_subnet_cidr = (var.create_oci_bastion_service && var.bastion_service_allow_worker_ssh ?
+  workers_subnet_cidr = (local.create_oci_bastion_service && var.bastion_service_allow_worker_ssh ?
     (var.custom_subnet_ids ?
       one(data.oci_core_subnet.workers_bastion_svc[*].cidr_block) :
       lookup(local.subnets["workers"], "cidr", cidrsubnet(local.vcn_cidr, lookup(local.subnets["workers"], "newbits"), lookup(local.subnets["workers"], "netnum")))
     ) :
     null
   )
-  bastion_service_subnet_cidr = (var.create_oci_bastion_service ?
+  bastion_service_subnet_cidr = (local.create_oci_bastion_service ?
     (var.custom_subnet_ids ?
       one(data.oci_core_subnet.bastion_service.*.cidr_block) :
       lookup(local.subnets["bastion_service"], "cidr", cidrsubnet(local.vcn_cidr, lookup(local.subnets["bastion_service"], "newbits"), lookup(local.subnets["bastion_service"], "netnum")))
     ) :
     null
   )
-  bastion_service_subnet_id = (var.create_oci_bastion_service ?
+  bastion_service_subnet_id = (local.create_oci_bastion_service ?
     (var.custom_subnet_ids ?
       var.bastion_service_sn_id :
       one(oci_core_subnet.bastion_service[*].id)
@@ -27,25 +27,25 @@ locals {
 }
 
 data "oci_core_vcn" "bastion_service_vcn" {
-  count = var.create_oci_bastion_service ? 1 : 0
+  count = local.create_oci_bastion_service ? 1 : 0
 
   vcn_id = coalesce(var.vcn_id, module.oke.vcn_id)
 }
 
 data "oci_core_subnet" "bastion_service" {
-  count = var.create_oci_bastion_service && var.custom_subnet_ids ? 1 : 0
+  count = local.create_oci_bastion_service && var.custom_subnet_ids ? 1 : 0
 
   subnet_id = var.bastion_service_sn_id
 }
 
 data "oci_core_subnet" "workers_bastion_svc" {
-  count = var.create_oci_bastion_service && var.bastion_service_allow_worker_ssh && var.custom_subnet_ids ? 1 : 0
+  count = local.create_oci_bastion_service && var.bastion_service_allow_worker_ssh && var.custom_subnet_ids ? 1 : 0
 
   subnet_id = var.workers_sn_id
 }
 
 resource "oci_core_subnet" "bastion_service" {
-  count = var.create_oci_bastion_service && !var.custom_subnet_ids ? 1 : 0
+  count = local.create_oci_bastion_service && !var.custom_subnet_ids ? 1 : 0
 
   cidr_block                 = local.bastion_service_subnet_cidr
   compartment_id             = var.compartment_ocid
@@ -61,7 +61,7 @@ resource "oci_core_subnet" "bastion_service" {
 }
 
 resource "oci_core_security_list" "bastion_service" {
-  count = var.create_oci_bastion_service ? 1 : 0
+  count = local.create_oci_bastion_service ? 1 : 0
 
   compartment_id = var.compartment_ocid
   vcn_id         = one(data.oci_core_vcn.bastion_service_vcn[*].id)
@@ -115,7 +115,7 @@ resource "oci_core_security_list" "bastion_service" {
 }
 
 resource "oci_core_network_security_group_security_rule" "bastion_service_worker_ssh" {
-  count = var.create_oci_bastion_service && var.bastion_service_allow_worker_ssh ? 1 : 0
+  count = local.create_oci_bastion_service && var.bastion_service_allow_worker_ssh ? 1 : 0
 
   network_security_group_id = module.oke.worker_nsg_id
   direction                 = "INGRESS"
@@ -134,7 +134,7 @@ resource "oci_core_network_security_group_security_rule" "bastion_service_worker
 }
 
 resource "oci_bastion_bastion" "bastion_service" {
-  count = var.create_oci_bastion_service ? 1 : 0
+  count = local.create_oci_bastion_service ? 1 : 0
 
   bastion_type                 = "STANDARD"
   compartment_id               = var.compartment_ocid

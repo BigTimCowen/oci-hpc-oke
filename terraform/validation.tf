@@ -2,12 +2,12 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 locals {
-  invalid_desired_load_balancers = !var.create_public_subnets && var.preferred_kubernetes_services == "public"
-  invalid_public_ep              = !var.create_public_subnets && var.control_plane_is_public
-  invalid_bastion                = !var.create_public_subnets && var.create_bastion
-  invalid_worker_rdma_image      = can(regex("(?i)oracle.*linux", one(data.oci_core_image.worker_rdma[*].display_name)))
-  invalid_grace_blackwell_shape  = contains(["BM.GPU.GB200.4", "BM.GPU.GB200-v2.4", "BM.GPU.GB200-v3.4", "BM.GPU.GB300.4"], var.worker_rdma_shape)
-  invalid_image_uri = anytrue([
+  invalid_desired_load_balancers = local.create_cluster && !var.create_public_subnets && var.preferred_kubernetes_services == "public"
+  invalid_public_ep              = local.create_cluster && !var.create_public_subnets && var.control_plane_is_public
+  invalid_bastion                = local.create_bastion && !var.create_public_subnets
+  invalid_worker_rdma_image      = local.create_cluster && can(regex("(?i)oracle.*linux", one(data.oci_core_image.worker_rdma[*].display_name)))
+  invalid_grace_blackwell_shape  = local.create_cluster && contains(["BM.GPU.GB200.4", "BM.GPU.GB200-v2.4", "BM.GPU.GB200-v3.4", "BM.GPU.GB300.4"], var.worker_rdma_shape)
+  invalid_image_uri = local.create_cluster && anytrue([
     var.worker_ops_image_use_uri && !startswith(coalesce(var.worker_ops_image_custom_uri, "none"), "http"),
     var.worker_cpu_image_use_uri && !startswith(coalesce(var.worker_cpu_image_custom_uri, "none"), "http"),
     var.worker_gpu_image_use_uri && !startswith(coalesce(var.worker_gpu_image_custom_uri, "none"), "http"),
@@ -31,11 +31,11 @@ locals {
   pods_subnet_prefix    = var.pods_sn_cidr != null ? tonumber(split("/", var.pods_sn_cidr)[1]) : local.vcn_prefix_length + 1
   pods_subnet_capacity  = pow(2, 32 - local.pods_subnet_prefix) - 3
   is_vcn_native_cni     = contains(["npn", "VCN-Native Pod Networking"], var.cni_type)
-  invalid_pods_capacity = local.is_vcn_native_cni && local.total_pods_required > local.pods_subnet_capacity
+  invalid_pods_capacity = local.create_cluster && local.is_vcn_native_cni && local.total_pods_required > local.pods_subnet_capacity
 
   # FSS PV cannot be created when all deploy paths are inactive (private endpoint, no operator, no ORM)
   fss_pv_unreachable = alltrue([
-    var.create_fss,
+    local.create_fss,
     !local.deploy_from_local,
     !local.deploy_from_orm,
     !local.deploy_from_operator,
@@ -44,12 +44,12 @@ locals {
   # Check if the ssh_public_key has comment
   ssh_public_key_has_comment = can(regex("\\S+\\s+\\S+\\s+\\S+\\s?", var.ssh_public_key))
 
-  invalid_gpu_operator_without_nfd = var.deploy_nvidia_gpu_operator && !var.deploy_node_feature_discovery
-  invalid_nvidia_dra_without_nfd   = var.install_nvidia_dra_driver && var.worker_gmc_enabled && !var.deploy_node_feature_discovery
+  invalid_gpu_operator_without_nfd = local.deploy_nvidia_gpu_operator && !local.deploy_node_feature_discovery
+  invalid_nvidia_dra_without_nfd   = local.install_nvidia_dra_driver && var.worker_gmc_enabled && !local.deploy_node_feature_discovery
 }
 
 data "oci_core_image" "worker_rdma" {
-  count    = coalesce(var.worker_rdma_image_custom_id, var.worker_rdma_image_platform_id, "none") != "none" ? 1 : 0
+  count    = local.create_cluster && coalesce(var.worker_rdma_image_custom_id, var.worker_rdma_image_platform_id, "none") != "none" ? 1 : 0
   image_id = coalesce(var.worker_rdma_image_custom_id, var.worker_rdma_image_platform_id, "none")
 }
 
@@ -99,7 +99,7 @@ resource "null_resource" "validate_cluster_endpoint" {
 }
 
 resource "null_resource" "validate_worker_rdma_image" {
-  count = coalesce(var.worker_rdma_image_custom_id, var.worker_rdma_image_platform_id, "none") != "none" ? 1 : 0
+  count = local.create_cluster && coalesce(var.worker_rdma_image_custom_id, var.worker_rdma_image_platform_id, "none") != "none" ? 1 : 0
 
   lifecycle {
     precondition {
@@ -110,7 +110,7 @@ resource "null_resource" "validate_worker_rdma_image" {
 }
 
 resource "null_resource" "validate_image_uri" {
-  count = anytrue([var.worker_ops_image_use_uri, var.worker_cpu_image_use_uri, var.worker_gpu_image_use_uri, var.worker_rdma_image_use_uri]) ? 1 : 0
+  count = local.create_cluster && anytrue([var.worker_ops_image_use_uri, var.worker_cpu_image_use_uri, var.worker_gpu_image_use_uri, var.worker_rdma_image_use_uri]) ? 1 : 0
 
   lifecycle {
     precondition {

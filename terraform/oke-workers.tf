@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 locals {
-  create_workers      = true
+  create_workers      = local.create_cluster
   fss_mount_ip        = try(data.oci_core_private_ip.fss_mt_ip[0].ip_address, "")
   lustre_mount_ip     = try(oci_lustre_file_storage_lustre_file_system.lustre[0].management_service_address, "")
   ssh_authorized_keys = compact(split("\n", trimspace(local.ssh_public_key)))
@@ -37,12 +37,12 @@ locals {
     var.nvme_raid_level,
   ) : ""
 
-  runcmd_fss_mount = var.create_fss && local.fss_mount_ip != "" && local.fss_export_path != "" ? format(
+  runcmd_fss_mount = local.create_fss && local.fss_mount_ip != "" && local.fss_export_path != "" ? format(
     "curl -sL -o /var/run/oke-fss-mount.sh https://raw.githubusercontent.com/oracle-quickstart/oci-hpc-oke/refs/heads/main/files/oke-fss-mount.sh && (bash /var/run/oke-fss-mount.sh '%v' '%v' '%v' || echo 'Error mounting FSS' >&2)",
     local.fss_export_path, var.fss_mount_path, local.fss_mount_ip
   ) : ""
 
-  runcmd_lustre_mount = var.create_lustre && local.lustre_mount_ip != "" ? format(
+  runcmd_lustre_mount = local.create_lustre && local.lustre_mount_ip != "" ? format(
     "curl -sL -o /var/run/oke-lustre-mount.sh https://raw.githubusercontent.com/oracle-quickstart/oci-hpc-oke/refs/heads/main/files/oke-lustre-mount.sh && (bash /var/run/oke-lustre-mount.sh '%v' '%v' '%v' || echo 'Error mounting Lustre' >&2)",
     local.lustre_mount_ip, var.lustre_file_system_name, var.lustre_mount_path
   ) : ""

@@ -58,7 +58,7 @@ locals {
           }
         }
       ] : [],
-      var.setup_oci_metrics_exporter ?
+      local.setup_oci_metrics_exporter ?
       [for cdk, cdv in local.grafana_oci_dashboards :
         {
           name      = "dashboard-${trimsuffix(cdk, ".json")}",
@@ -93,7 +93,7 @@ locals {
 }
 
 resource "null_resource" "deploy_grafana_dashboards_and_alerts_from_operator" {
-  count = alltrue([var.install_monitoring, var.install_node_problem_detector_kube_prometheus_stack, local.deploy_from_operator]) ? 1 : 0
+  count = alltrue([local.install_node_problem_detector_kube_prometheus_stack, local.deploy_from_operator]) ? 1 : 0
 
   triggers = {
     manifest_md5    = sha256(join(".", [for entry in sort(flatten([local.grafana_common_dashboard_files_path, local.grafana_amd_dashboard_files_path, local.grafana_nvidia_dashboard_files_path, local.grafana_oci_dashboard_files_path, local.grafana_alert_files_path])) : filemd5(entry)]))

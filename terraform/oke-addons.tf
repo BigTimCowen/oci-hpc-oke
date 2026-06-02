@@ -2,14 +2,14 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 locals {
-  deploy_coredns_addon_override = local.total_worker_nodes > 50
+  deploy_coredns_addon_override = local.create_cluster && local.total_worker_nodes > 50
 
   nvidia_gpu_operator_namespace         = "gpu-operator"
   nvidia_dcgm_exporter_metrics_config   = lookup(var.nvidia_gpu_operator_configuration, "dcgmExporter.config.name", "metrics-config")
   nvidia_dcgm_exporter_metrics_filename = "dcgm-metrics.csv"
   nvidia_dcgm_exporter_metrics          = file("${path.module}/files/nvidia-gpu-operator/${local.nvidia_dcgm_exporter_metrics_filename}")
   configure_nvidia_dcgm_metrics = alltrue([
-    var.deploy_nvidia_gpu_operator,
+    local.deploy_nvidia_gpu_operator,
     lookup(var.nvidia_gpu_operator_configuration, "dcgmExporter.enabled", "true") == "true",
     local.nvidia_dcgm_exporter_metrics_config != "",
   ])
@@ -116,14 +116,14 @@ locals {
   ]
 
   amd_gpu_plugin_shapes = ["BM.GPU.MI300X.8", "BM.GPU.MI355X-v1.8", "BM.GPU.MI355X.8"]
-  deploy_amd_gpu_plugin_addon = anytrue([
+  deploy_amd_gpu_plugin_addon = local.create_cluster && anytrue([
     contains(local.amd_gpu_plugin_shapes, var.worker_rdma_shape),
     contains(local.amd_gpu_plugin_shapes, var.worker_gpu_shape)
   ])
 
-  managed_addon_gate_enabled = anytrue([
-    var.deploy_node_feature_discovery,
-    var.deploy_nvidia_gpu_operator,
+  managed_addon_gate_enabled = local.create_cluster && anytrue([
+    local.deploy_node_feature_discovery,
+    local.deploy_nvidia_gpu_operator,
   ])
 
   managed_addon_non_gpu_pool_ids = compact([
@@ -361,7 +361,7 @@ resource "terraform_data" "wait_for_non_gpu_workers" {
 }
 
 resource "oci_containerengine_addon" "node_feature_discovery" {
-  count = var.deploy_node_feature_discovery ? 1 : 0
+  count = local.deploy_node_feature_discovery ? 1 : 0
 
   addon_name = "NodeFeatureDiscovery"
   cluster_id = module.oke.cluster_id
@@ -376,7 +376,7 @@ resource "oci_containerengine_addon" "node_feature_discovery" {
 }
 
 resource "oci_containerengine_addon" "nvidia_gpu_operator" {
-  count = var.deploy_nvidia_gpu_operator ? 1 : 0
+  count = local.deploy_nvidia_gpu_operator ? 1 : 0
 
   addon_name = "NvidiaGpuOperator"
   cluster_id = module.oke.cluster_id

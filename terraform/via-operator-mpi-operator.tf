@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 resource "null_resource" "mpi_operator" {
-  count = alltrue([var.install_mpi_operator, local.deploy_from_operator]) ? 1 : 0
+  count = alltrue([local.install_mpi_operator, local.deploy_from_operator]) ? 1 : 0
 
   triggers = {
     manifest_md5    = md5(file("${path.module}/files/mpi-operator/mpi-operator.yaml"))

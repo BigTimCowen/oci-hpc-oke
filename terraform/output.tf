@@ -14,22 +14,22 @@ output "nat_route_table_id" { value = module.oke.nat_route_table_id }
 # Bastion
 output "bastion_id" { value = module.oke.bastion_id }
 output "bastion_public_ip" { value = module.oke.bastion_public_ip }
-output "bastion_ssh_command" { value = var.create_bastion ? module.oke.ssh_to_bastion : "" }
+output "bastion_ssh_command" { value = local.create_bastion ? module.oke.ssh_to_bastion : "" }
 output "bastion_subnet_id" { value = module.oke.bastion_subnet_id }
 output "bastion_subnet_cidr" { value = module.oke.bastion_subnet_cidr }
 output "bastion_nsg_id" { value = module.oke.bastion_nsg_id }
 
 # Bastion Service
-output "bastion_service_id" { value = var.create_oci_bastion_service ? one(oci_bastion_bastion.bastion_service[*].id) : "" }
-output "bastion_service_subnet_id" { value = var.create_oci_bastion_service ? local.bastion_service_subnet_id : "" }
-output "bastion_service_subnet_cidr" { value = var.create_oci_bastion_service ? local.bastion_service_subnet_cidr : "" }
-output "bastion_service_security_list_id" { value = var.create_oci_bastion_service ? one(oci_core_security_list.bastion_service[*].id) : "" }
-output "oke_private_endpoint_ip" { value = var.create_oci_bastion_service ? local.oke_private_endpoint_ip : "" }
+output "bastion_service_id" { value = local.create_oci_bastion_service ? one(oci_bastion_bastion.bastion_service[*].id) : "" }
+output "bastion_service_subnet_id" { value = local.create_oci_bastion_service ? local.bastion_service_subnet_id : "" }
+output "bastion_service_subnet_cidr" { value = local.create_oci_bastion_service ? local.bastion_service_subnet_cidr : "" }
+output "bastion_service_security_list_id" { value = local.create_oci_bastion_service ? one(oci_core_security_list.bastion_service[*].id) : "" }
+output "oke_private_endpoint_ip" { value = local.create_oci_bastion_service ? local.oke_private_endpoint_ip : "" }
 output "bastion_service_session_command" {
-  value = var.create_oci_bastion_service ? format(
+  value = local.create_oci_bastion_service ? format(
     "./oke-bastion-service-session.sh --bastion-ocid %s --cluster-ocid %s --oke-endpoint-ip %s --region %s --profile %s --ssh-key %s --local-port %d --ttl-seconds %d --auto-tunnel --non-interactive",
     one(oci_bastion_bastion.bastion_service[*].id),
-    module.oke.cluster_id,
+    local.cluster_id,
     local.oke_private_endpoint_ip,
     var.region,
     var.oci_profile != null ? var.oci_profile : "DEFAULT",
@@ -39,7 +39,7 @@ output "bastion_service_session_command" {
   ) : ""
 }
 output "bastion_service_worker_ssh_command" {
-  value = var.create_oci_bastion_service && var.bastion_service_allow_worker_ssh ? format(
+  value = local.create_oci_bastion_service && var.bastion_service_allow_worker_ssh ? format(
     "./oke-bastion-service-session.sh --bastion-ocid %s --worker-ip <worker-ip> --region %s --profile %s --ssh-key %s --ttl-seconds %d --auto-tunnel --non-interactive",
     one(oci_bastion_bastion.bastion_service[*].id),
     var.region,
@@ -52,18 +52,18 @@ output "bastion_service_worker_ssh_command" {
 # Operator
 output "operator_id" { value = module.oke.operator_id }
 output "operator_private_ip" { value = module.oke.operator_private_ip }
-output "operator_ssh_command" { value = var.create_operator ? module.oke.ssh_to_operator : "" }
+output "operator_ssh_command" { value = local.create_operator ? module.oke.ssh_to_operator : "" }
 output "operator_subnet_id" { value = module.oke.operator_subnet_id }
 output "operator_subnet_cidr" { value = module.oke.operator_subnet_cidr }
 output "operator_nsg_id" { value = module.oke.operator_nsg_id }
 
 # Cluster
 output "cni_type" { value = var.cni_type }
-output "cluster_id" { value = module.oke.cluster_id }
-output "cluster_name" { value = local.cluster_name }
-output "cluster_public_endpoint" { value = var.control_plane_is_public ? local.cluster_public_endpoint : "" }
-output "cluster_private_endpoint" { value = local.cluster_private_endpoint }
-output "cluster_ca_cert" { value = base64decode(module.oke.cluster_ca_cert) }
+output "cluster_id" { value = local.create_cluster ? local.cluster_id : null }
+output "cluster_name" { value = local.create_cluster ? local.cluster_name : "" }
+output "cluster_public_endpoint" { value = local.create_cluster && var.control_plane_is_public ? local.cluster_public_endpoint : "" }
+output "cluster_private_endpoint" { value = local.create_cluster ? local.cluster_private_endpoint : "" }
+output "cluster_ca_cert" { value = local.create_cluster ? base64decode(local.cluster_ca_cert) : "" }
 output "control_plane_subnet_id" { value = module.oke.control_plane_subnet_id }
 output "control_plane_subnet_cidr" { value = module.oke.control_plane_subnet_cidr }
 output "control_plane_nsg_id" { value = module.oke.control_plane_nsg_id }
@@ -99,11 +99,11 @@ output "worker_rdma_pool_id" { value = lookup(module.oke.worker_pool_ids, "oke-r
 
 # Monitoring
 output "grafana_fetch_endpoint_command" {
-  value = alltrue([var.install_node_problem_detector_kube_prometheus_stack, var.preferred_kubernetes_services == "public"]) ? format("kubectl get ingress -n %v -l app.kubernetes.io/instance=kube-prometheus-stack -o jsonpath='{.items[0].spec.rules[0].host}'", var.monitoring_namespace) : format("kubectl get svc -n %v -l app.kubernetes.io/instance=kube-prometheus-stack,app.kubernetes.io/name=grafana -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'", var.monitoring_namespace)
+  value = local.install_node_problem_detector_kube_prometheus_stack ? (var.preferred_kubernetes_services == "public" ? format("kubectl get ingress -n %v -l app.kubernetes.io/instance=kube-prometheus-stack -o jsonpath='{.items[0].spec.rules[0].host}'", var.monitoring_namespace) : format("kubectl get svc -n %v -l app.kubernetes.io/instance=kube-prometheus-stack,app.kubernetes.io/name=grafana -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'", var.monitoring_namespace)) : ""
 }
 
 output "grafana_url" {
-  value = var.install_node_problem_detector_kube_prometheus_stack ? (
+  value = local.install_node_problem_detector_kube_prometheus_stack ? (
     var.preferred_kubernetes_services == "public" ?
     format("https://grafana.%s.%s", try(data.kubernetes_service_v1.ingress_lb[0].status[0].load_balancer[0].ingress[0].ip, try(data.oci_load_balancer_load_balancers.lbs[0].load_balancers[0].ip_addresses[0], "N/A")), var.wildcard_dns_domain) :
     format("http://%s", try(data.kubernetes_service_v1.grafana_internal_ip[0].status[0].load_balancer[0].ingress[0].ip, try(data.oci_load_balancer_load_balancers.lbs[0].load_balancers[0].ip_addresses[0], try(data.oci_load_balancer_load_balancers.internal_lbs[0].load_balancers[0].ip_addresses[0], "N/A"))))
@@ -119,19 +119,19 @@ output "grafana_admin_username" {
 }
 
 output "prom_server_port_forward" {
-  value = format("kubectl port-forward -n %v svc/kube-prometheus-stack-prometheus 9090:9090", var.monitoring_namespace)
+  value = local.install_node_problem_detector_kube_prometheus_stack ? format("kubectl port-forward -n %v svc/kube-prometheus-stack-prometheus 9090:9090", var.monitoring_namespace) : ""
 }
 
 output "grafana_port_forward" {
-  value = format("kubectl port-forward -n %v svc/kube-prometheus-stack-grafana 3000:80", var.monitoring_namespace)
+  value = local.install_grafana ? format("kubectl port-forward -n %v svc/kube-prometheus-stack-grafana 3000:80", var.monitoring_namespace) : ""
 }
 
 output "access_k8s_public_endpoint" {
-  value = var.control_plane_is_public ? format("oci ce cluster create-kubeconfig --cluster-id %v --file $HOME/.kube/config --region %v --token-version 2.0.0 --kube-endpoint PUBLIC_ENDPOINT", module.oke.cluster_id, var.region) : "N/A"
+  value = local.create_cluster && var.control_plane_is_public ? format("oci ce cluster create-kubeconfig --cluster-id %v --file $HOME/.kube/config --region %v --token-version 2.0.0 --kube-endpoint PUBLIC_ENDPOINT", local.cluster_id, var.region) : "N/A"
 }
 
 output "access_k8s_private_endpoint" {
-  value = format("oci ce cluster create-kubeconfig --cluster-id %v --file $HOME/.kube/config --region %v --token-version 2.0.0 --kube-endpoint PRIVATE_ENDPOINT", module.oke.cluster_id, var.region)
+  value = local.create_cluster ? format("oci ce cluster create-kubeconfig --cluster-id %v --file $HOME/.kube/config --region %v --token-version 2.0.0 --kube-endpoint PRIVATE_ENDPOINT", local.cluster_id, var.region) : "N/A"
 }
 
 # output "cluster_orm_endpoint" {

@@ -5,9 +5,9 @@ module "certmanager" {
   count = alltrue([
     anytrue([
       var.preferred_kubernetes_services == "public",
-      var.install_kueue,
-      var.install_nvidia_dra_driver,
-      alltrue([var.install_monitoring, var.install_node_problem_detector_kube_prometheus_stack])
+      local.install_kueue,
+      local.install_nvidia_dra_driver,
+      local.install_node_problem_detector_kube_prometheus_stack
     ]),
     local.deploy_from_operator
   ]) ? 1 : 0
@@ -61,7 +61,7 @@ module "certmanager" {
 }
 
 module "ingress" {
-  count  = alltrue([var.install_monitoring, local.deploy_from_operator, var.install_node_problem_detector_kube_prometheus_stack, var.preferred_kubernetes_services == "public"]) ? 1 : 0
+  count  = alltrue([local.install_node_problem_detector_kube_prometheus_stack, local.deploy_from_operator, var.preferred_kubernetes_services == "public"]) ? 1 : 0
   source = "./helm-module"
 
   bastion_host    = module.oke.bastion_public_ip
@@ -107,7 +107,7 @@ module "ingress" {
 
 
 module "kube_prometheus_stack" {
-  count  = alltrue([var.install_monitoring, local.deploy_from_operator, var.install_node_problem_detector_kube_prometheus_stack]) ? 1 : 0
+  count  = alltrue([local.install_node_problem_detector_kube_prometheus_stack, local.deploy_from_operator]) ? 1 : 0
   source = "./helm-module"
 
   bastion_host    = module.oke.bastion_public_ip
@@ -182,7 +182,7 @@ module "kube_prometheus_stack" {
 
 
 module "node_problem_detector" {
-  count  = alltrue([var.install_monitoring, local.deploy_from_operator, var.install_node_problem_detector_kube_prometheus_stack]) ? 1 : 0
+  count  = alltrue([local.install_node_problem_detector_kube_prometheus_stack, local.deploy_from_operator]) ? 1 : 0
   source = "./helm-module"
 
   bastion_host    = module.oke.bastion_public_ip
@@ -212,7 +212,7 @@ module "node_problem_detector" {
 
 
 resource "null_resource" "nvidia_dcgm_exporter_service_monitor" {
-  count = alltrue([var.install_monitoring, local.deploy_from_operator, var.install_node_problem_detector_kube_prometheus_stack, var.deploy_nvidia_gpu_operator, lookup(var.nvidia_gpu_operator_configuration, "dcgmExporter.enabled", "true") == "true", (var.worker_rdma_enabled && can(regex("GPU", coalesce(var.worker_rdma_shape, ""))) && !contains(["BM.GPU.MI300X.8", "BM.GPU.MI355X-v1.8", "BM.GPU.MI355X.8"], var.worker_rdma_shape)) || (var.worker_gpu_enabled && can(regex("GPU", coalesce(var.worker_gpu_shape, ""))) && !contains(["BM.GPU.MI300X.8", "BM.GPU.MI355X-v1.8", "BM.GPU.MI355X.8"], var.worker_gpu_shape))]) ? 1 : 0
+  count = alltrue([local.install_node_problem_detector_kube_prometheus_stack, local.deploy_from_operator, local.deploy_nvidia_gpu_operator, lookup(var.nvidia_gpu_operator_configuration, "dcgmExporter.enabled", "true") == "true", (var.worker_rdma_enabled && can(regex("GPU", coalesce(var.worker_rdma_shape, ""))) && !contains(["BM.GPU.MI300X.8", "BM.GPU.MI355X-v1.8", "BM.GPU.MI355X.8"], var.worker_rdma_shape)) || (var.worker_gpu_enabled && can(regex("GPU", coalesce(var.worker_gpu_shape, ""))) && !contains(["BM.GPU.MI300X.8", "BM.GPU.MI355X-v1.8", "BM.GPU.MI355X.8"], var.worker_gpu_shape))]) ? 1 : 0
 
   triggers = {
     manifest_md5    = md5(local.nvidia_dcgm_exporter_service_monitor_manifest)
@@ -279,7 +279,7 @@ resource "null_resource" "nvidia_dcgm_exporter_service_monitor" {
 
 
 module "amd_device_metrics_exporter" {
-  count  = alltrue([var.install_monitoring, local.deploy_from_operator, var.install_node_problem_detector_kube_prometheus_stack, var.install_amd_device_metrics_exporter && (contains(["BM.GPU.MI300X.8", "BM.GPU.MI355X-v1.8", "BM.GPU.MI355X.8"], var.worker_rdma_shape) || contains(["BM.GPU.MI300X.8", "BM.GPU.MI355X-v1.8", "BM.GPU.MI355X.8"], var.worker_gpu_shape))]) ? 1 : 0
+  count  = alltrue([local.install_node_problem_detector_kube_prometheus_stack, local.deploy_from_operator, local.install_amd_device_metrics_exporter && (contains(["BM.GPU.MI300X.8", "BM.GPU.MI355X-v1.8", "BM.GPU.MI355X.8"], var.worker_rdma_shape) || contains(["BM.GPU.MI300X.8", "BM.GPU.MI355X-v1.8", "BM.GPU.MI355X.8"], var.worker_gpu_shape))]) ? 1 : 0
   source = "./helm-module"
 
   bastion_host    = module.oke.bastion_public_ip
@@ -309,7 +309,7 @@ module "amd_device_metrics_exporter" {
 
 
 module "oke-ons-webhook" {
-  count  = alltrue([var.install_monitoring, local.deploy_from_operator, var.install_node_problem_detector_kube_prometheus_stack, var.setup_alerting]) ? 1 : 0
+  count  = alltrue([local.setup_alerting, local.deploy_from_operator]) ? 1 : 0
   source = "./helm-module"
 
   bastion_host    = module.oke.bastion_public_ip
@@ -346,7 +346,7 @@ module "oke-ons-webhook" {
 
 
 module "oci_metrics_exporter" {
-  count  = alltrue([var.install_monitoring, local.deploy_from_operator, var.install_node_problem_detector_kube_prometheus_stack, var.setup_oci_metrics_exporter]) ? 1 : 0
+  count  = alltrue([local.setup_oci_metrics_exporter, local.deploy_from_operator]) ? 1 : 0
   source = "./helm-module"
 
   bastion_host    = module.oke.bastion_public_ip

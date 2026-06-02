@@ -5,9 +5,9 @@ resource "helm_release" "cert_manager" {
   count = alltrue([
     anytrue([
       var.preferred_kubernetes_services == "public",
-      var.install_kueue,
-      var.install_nvidia_dra_driver,
-      alltrue([var.install_monitoring, var.install_node_problem_detector_kube_prometheus_stack]),
+      local.install_kueue,
+      local.install_nvidia_dra_driver,
+      local.install_node_problem_detector_kube_prometheus_stack,
     ]),
     local.deploy_from_local || local.deploy_from_orm
   ]) ? 1 : 0
@@ -30,7 +30,7 @@ resource "helm_release" "cert_manager" {
 }
 
 resource "kubectl_manifest" "cert_manager_webhook_probe" {
-  count = alltrue([var.install_monitoring, var.install_node_problem_detector_kube_prometheus_stack, var.preferred_kubernetes_services == "public", local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
+  count = alltrue([local.install_node_problem_detector_kube_prometheus_stack, var.preferred_kubernetes_services == "public", local.deploy_from_local || local.deploy_from_orm]) ? 1 : 0
 
   # Create a harmless cert-manager resource first so provider retries absorb
   # webhook CA propagation races before the real ACME ClusterIssuer is applied.

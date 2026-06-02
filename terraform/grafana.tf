@@ -13,36 +13,36 @@ locals {
   grafana_nvidia_dashboard_files = fileset("${local.grafana_nvidia_dashboard_dir}", "*.json")
   grafana_oci_dashboard_files    = fileset("${local.grafana_oci_dashboard_dir}", "*.json")
 
-  grafana_common_dashboard_files_path = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards) ? [for f in local.grafana_common_dashboard_files : join("/", ["${local.grafana_common_dashboard_dir}", f])] : []
-  grafana_amd_dashboard_files_path    = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards) ? [for f in local.grafana_amd_dashboard_files : join("/", ["${local.grafana_amd_dashboard_dir}", f])] : []
-  grafana_nvidia_dashboard_files_path = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards) ? [for f in local.grafana_nvidia_dashboard_files : join("/", ["${local.grafana_nvidia_dashboard_dir}", f])] : []
-  grafana_oci_dashboard_files_path    = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards && var.setup_oci_metrics_exporter) ? [for f in local.grafana_oci_dashboard_files : join("/", ["${local.grafana_oci_dashboard_dir}", f])] : []
+  grafana_common_dashboard_files_path = local.install_grafana_dashboards ? [for f in local.grafana_common_dashboard_files : join("/", ["${local.grafana_common_dashboard_dir}", f])] : []
+  grafana_amd_dashboard_files_path    = local.install_grafana_dashboards ? [for f in local.grafana_amd_dashboard_files : join("/", ["${local.grafana_amd_dashboard_dir}", f])] : []
+  grafana_nvidia_dashboard_files_path = local.install_grafana_dashboards ? [for f in local.grafana_nvidia_dashboard_files : join("/", ["${local.grafana_nvidia_dashboard_dir}", f])] : []
+  grafana_oci_dashboard_files_path    = local.install_grafana_dashboards && local.setup_oci_metrics_exporter ? [for f in local.grafana_oci_dashboard_files : join("/", ["${local.grafana_oci_dashboard_dir}", f])] : []
 
-  grafana_common_dashboards = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards) ? {
+  grafana_common_dashboards = local.install_grafana_dashboards ? {
     for f in local.grafana_common_dashboard_files :
     f => file(join("/", ["${local.grafana_common_dashboard_dir}", f]))
   } : {}
-  grafana_amd_dashboards = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards) ? {
+  grafana_amd_dashboards = local.install_grafana_dashboards ? {
     for f in local.grafana_amd_dashboard_files :
     f => file(join("/", ["${local.grafana_amd_dashboard_dir}", f]))
   } : {}
-  grafana_nvidia_dashboards = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards) ? {
+  grafana_nvidia_dashboards = local.install_grafana_dashboards ? {
     for f in local.grafana_nvidia_dashboard_files :
     f => file(join("/", ["${local.grafana_nvidia_dashboard_dir}", f]))
   } : {}
-  grafana_oci_dashboards = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards && var.setup_oci_metrics_exporter) ? {
+  grafana_oci_dashboards = local.install_grafana_dashboards && local.setup_oci_metrics_exporter ? {
     for f in local.grafana_oci_dashboard_files :
     f => file(join("/", ["${local.grafana_oci_dashboard_dir}", f]))
   } : {}
 
   grafana_alert_dir   = "${path.module}/files/grafana/alerts"
   grafana_alert_files = fileset(local.grafana_alert_dir, "*.yaml")
-  grafana_alerts = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards) ? {
+  grafana_alerts = local.install_grafana_dashboards ? {
     for f in local.grafana_alert_files :
     f => file(join("/", [local.grafana_alert_dir, f]))
   } : {}
 
-  grafana_alert_files_path = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards) ? [for f in local.grafana_alert_files : join("/", ["${local.grafana_alert_dir}", f])] : []
+  grafana_alert_files_path = local.install_grafana_dashboards ? [for f in local.grafana_alert_files : join("/", ["${local.grafana_alert_dir}", f])] : []
 }
 
 resource "random_password" "grafana_admin_password" {

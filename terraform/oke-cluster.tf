@@ -7,48 +7,71 @@ data "oci_containerengine_clusters" "oke" {
 
 locals {
 
-  total_worker_nodes = sum([
+  create_cluster             = var.create_cluster
+  create_bastion             = local.create_cluster && var.create_bastion
+  create_operator            = local.create_cluster && var.create_operator
+  create_oci_bastion_service = local.create_cluster && var.create_oci_bastion_service
+  create_fss                 = local.create_cluster && var.create_fss
+  create_lustre              = local.create_cluster && var.create_lustre
+
+  install_monitoring                                  = local.create_cluster && var.install_monitoring
+  install_node_problem_detector_kube_prometheus_stack = local.install_monitoring && var.install_node_problem_detector_kube_prometheus_stack
+  install_grafana                                     = local.install_node_problem_detector_kube_prometheus_stack && var.install_grafana
+  install_grafana_dashboards                          = local.install_grafana && var.install_grafana_dashboards
+  install_amd_device_metrics_exporter                 = local.install_node_problem_detector_kube_prometheus_stack && var.install_amd_device_metrics_exporter
+  install_mpi_operator                                = local.create_cluster && var.install_mpi_operator
+  install_kueue                                       = local.create_cluster && var.install_kueue
+  install_oci_hpc_oke_utils                           = local.create_cluster && var.install_oci_hpc_oke_utils
+  install_nvidia_dra_driver                           = local.create_cluster && var.install_nvidia_dra_driver
+  deploy_node_feature_discovery                       = local.create_cluster && var.deploy_node_feature_discovery
+  deploy_nvidia_gpu_operator                          = local.create_cluster && var.deploy_nvidia_gpu_operator
+  setup_oci_metrics_exporter                          = local.install_node_problem_detector_kube_prometheus_stack && var.setup_oci_metrics_exporter
+  setup_alerting                                      = local.install_node_problem_detector_kube_prometheus_stack && var.setup_alerting
+  create_fss_pv                                       = local.create_fss && local.create_cluster
+  create_lustre_pv                                    = local.create_lustre && var.create_lustre_pv
+
+  total_worker_nodes = local.create_cluster ? sum([
     var.worker_ops_pool_size,
     var.worker_cpu_enabled ? var.worker_cpu_pool_size : 0,
     var.worker_gpu_enabled ? var.worker_gpu_pool_size : 0,
     var.worker_rdma_enabled ? var.worker_rdma_pool_size : 0,
-  ])
+  ]) : 0
 
-  deploy_from_operator = alltrue([var.create_bastion, var.create_operator, !var.control_plane_is_public, !var.deploy_to_oke_from_orm])
-  deploy_from_local    = alltrue([!local.deploy_from_operator, var.control_plane_is_public, !var.deploy_to_oke_from_orm])
-  deploy_from_orm      = alltrue([var.current_user_ocid != null, var.deploy_to_oke_from_orm])
+  deploy_from_operator = alltrue([local.create_cluster, local.create_bastion, local.create_operator, !var.control_plane_is_public, !var.deploy_to_oke_from_orm])
+  deploy_from_local    = alltrue([local.create_cluster, !local.deploy_from_operator, var.control_plane_is_public, !var.deploy_to_oke_from_orm])
+  deploy_from_orm      = alltrue([local.create_cluster, var.current_user_ocid != null, var.deploy_to_oke_from_orm])
 
   any_deployments_via_operator = alltrue([
     local.deploy_from_operator,
     anytrue([
-      var.install_monitoring,
-      var.install_node_problem_detector_kube_prometheus_stack,
-      var.install_mpi_operator,
-      var.install_kueue,
-      var.install_oci_hpc_oke_utils,
-      var.install_nvidia_dra_driver,
+      local.install_monitoring,
+      local.install_node_problem_detector_kube_prometheus_stack,
+      local.install_mpi_operator,
+      local.install_kueue,
+      local.install_oci_hpc_oke_utils,
+      local.install_nvidia_dra_driver,
     ])
   ])
 
   vcn_name = format("%v-%v", var.vcn_name, local.state_id)
 
-  cluster_endpoints        = module.oke.cluster_endpoints
-  cluster_public_endpoint  = try(format("https://%s", lookup(local.cluster_endpoints, "public_endpoint", "not-defined")), "not-defined")
-  cluster_private_endpoint = try(format("https://%s", lookup(local.cluster_endpoints, "private_endpoint", "not-defined")), "not-defined")
-  cluster_orm_endpoint     = try(format("https://%s:6443", one(data.oci_resourcemanager_private_endpoint_reachable_ip.oke.*.ip_address)), "not-defined")
+  cluster_endpoints        = local.create_cluster ? module.oke.cluster_endpoints : {}
+  cluster_public_endpoint  = local.create_cluster ? try(format("https://%s", lookup(local.cluster_endpoints, "public_endpoint", "not-defined")), "not-defined") : null
+  cluster_private_endpoint = local.create_cluster ? try(format("https://%s", lookup(local.cluster_endpoints, "private_endpoint", "not-defined")), "not-defined") : null
+  cluster_orm_endpoint     = local.deploy_from_orm ? try(format("https://%s:6443", one(data.oci_resourcemanager_private_endpoint_reachable_ip.oke.*.ip_address)), "not-defined") : null
 
-  cluster_ca_cert = module.oke.cluster_ca_cert
+  cluster_ca_cert = local.create_cluster ? module.oke.cluster_ca_cert : null
 
-  cluster_id        = module.oke.cluster_id
-  cluster_apiserver = try(trimspace(module.oke.apiserver_private_host), "")
+  cluster_id        = local.create_cluster ? module.oke.cluster_id : null
+  cluster_apiserver = local.create_cluster ? try(trimspace(module.oke.apiserver_private_host), "") : ""
   cluster_name      = format("%v-%v", var.cluster_name, local.state_id)
 
-  kube_exec_args = concat(
+  kube_exec_args = local.create_cluster ? concat(
     ["--region", var.region],
     var.oci_profile != null ? ["--profile", var.oci_profile] : [],
     ["ce", "cluster", "generate-token"],
-    ["--cluster-id", module.oke.cluster_id],
-  )
+    ["--cluster-id", local.cluster_id],
+  ) : []
 
   anywhere          = "0.0.0.0/0"
   anywhere_ipv6     = "::/0"
@@ -64,15 +87,15 @@ locals {
 
   nsgs = merge(
     {
-      bastion  = var.create_bastion ? { create = "auto" } : { create = "never" }
-      operator = var.create_operator ? { create = "auto" } : { create = "never" }
+      bastion  = local.create_bastion ? { create = "auto" } : { create = "never" }
+      operator = local.create_operator ? { create = "auto" } : { create = "never" }
       int_lb   = { create = "auto" }
       pub_lb   = { create = "auto" }
       cp       = { create = "auto" }
       workers  = { create = "auto" }
       pods     = { create = "auto" }
     },
-    var.create_fss ? {
+    local.create_fss ? {
       fss = { create = "always" }
     } : {}
   )
@@ -80,7 +103,7 @@ locals {
   subnets = merge(
     {
       bastion = merge(
-        var.create_bastion ? { create = "auto" } : { create = "never" },
+        local.create_bastion ? { create = "auto" } : { create = "never" },
         (var.create_vcn && var.bastion_sn_cidr == null) || (!var.create_vcn && !var.custom_subnet_ids) ?
         { newbits = 13, netnum = 1 } : {},
         var.create_vcn && var.bastion_sn_cidr != null ?
@@ -90,7 +113,7 @@ locals {
         lookup(var.subnet_advanced_attrs, "bastion", {})
       )
       operator = merge(
-        var.create_operator ? { create = "auto" } : { create = "never" },
+        local.create_operator ? { create = "auto" } : { create = "never" },
         (var.create_vcn && var.operator_sn_cidr == null) || (!var.create_vcn && !var.custom_subnet_ids) ?
         { newbits = 13, netnum = 2 } : {},
         var.create_vcn && var.operator_sn_cidr != null ?
@@ -150,7 +173,7 @@ locals {
         lookup(var.subnet_advanced_attrs, "pods", {})
       )
       bastion_service = merge(
-        var.create_oci_bastion_service ? { create = "auto" } : { create = "never" },
+        local.create_oci_bastion_service ? { create = "auto" } : { create = "never" },
         (var.create_vcn && var.bastion_service_sn_cidr == null) || (!var.create_vcn && !var.custom_subnet_ids) ?
         { newbits = 11, netnum = 4 } : {},
         var.create_vcn && var.bastion_service_sn_cidr != null ?
@@ -160,7 +183,7 @@ locals {
         lookup(var.subnet_advanced_attrs, "bastion_service", {})
       )
     },
-    var.create_fss ? {
+    local.create_fss ? {
       fss = merge(
         { create = "always" },
         (var.create_vcn && var.fss_sn_cidr == null) || (!var.create_vcn && !var.custom_subnet_ids) ?
@@ -172,7 +195,7 @@ locals {
         lookup(var.subnet_advanced_attrs, "fss", {})
       )
     } : {},
-    var.create_lustre ? {
+    local.create_lustre ? {
       lustre = merge(
         { create = "always" },
         (var.create_vcn && var.lustre_sn_cidr == null) || (!var.create_vcn && !var.custom_subnet_ids) ?
@@ -235,12 +258,12 @@ module "oke" {
   cni_type                           = local.cni_type
   control_plane_allowed_cidrs        = flatten(tolist([var.control_plane_allowed_cidrs]))
   control_plane_is_public            = var.control_plane_is_public
-  create_bastion                     = var.create_bastion
-  create_cluster                     = true
+  create_bastion                     = local.create_bastion
+  create_cluster                     = local.create_cluster
   create_iam_defined_tags            = false
   create_iam_resources               = false
   create_iam_tag_namespace           = false
-  create_operator                    = var.create_operator
+  create_operator                    = local.create_operator
   create_vcn                         = var.create_vcn
   enable_ipv6                        = var.enable_ipv6
   kubernetes_version                 = var.kubernetes_version
@@ -252,11 +275,11 @@ module "oke" {
   operator_image_os_version          = var.operator_image_os_version
   operator_user                      = var.operator_user
   operator_await_cloudinit           = local.any_deployments_via_operator ? true : false
-  operator_install_kubectl_from_repo = true
-  operator_install_helm_from_repo    = true
-  operator_install_oci_cli_from_repo = true
-  operator_install_k9s               = true
-  operator_install_kubectx           = true
+  operator_install_kubectl_from_repo = local.create_operator
+  operator_install_helm_from_repo    = local.create_operator
+  operator_install_oci_cli_from_repo = local.create_operator
+  operator_install_k9s               = local.create_operator
+  operator_install_kubectx           = local.create_operator
   operator_shape = {
     shape            = var.operator_shape_name
     ocpus            = lookup(local.operator_denseio_ocpus, var.operator_shape_name, var.operator_shape_ocpus)
@@ -292,7 +315,7 @@ module "oke" {
     }
   }
 
-  allow_rules_public_lb = alltrue([var.install_node_problem_detector_kube_prometheus_stack, var.preferred_kubernetes_services == "public"]) ? {
+  allow_rules_public_lb = alltrue([local.install_node_problem_detector_kube_prometheus_stack, var.preferred_kubernetes_services == "public"]) ? {
     "Allow TCP ingress from anywhere to HTTP port" = {
       protocol = local.tcp_protocol, port = 80, source = local.anywhere, source_type = local.rule_type_cidr,
     },
@@ -301,7 +324,7 @@ module "oke" {
     }
   } : {}
 
-  allow_rules_workers = var.create_lustre ? {
+  allow_rules_workers = local.create_lustre ? {
     "Allow ingress from Lustre to OKE Workers" = {
       protocol = local.tcp_protocol, source_port_min = 512, source_port_max = 1023, destination_port_min = 988, destination_port_max = 988, source = one(oci_core_network_security_group.lustre_nsg[*].id), source_type = local.rule_type_nsg,
     }

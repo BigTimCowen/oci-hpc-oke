@@ -82,6 +82,7 @@ variableGroups:
       - disable_gpu_device_plugin
 
   - title: "Identity"
+    visible: create_cluster
     variables:
       - use_default_identity_domain
       - identity_domain_compartment_id
@@ -126,6 +127,7 @@ variableGroups:
       - public_subnet_route_table
 
   - title: Cluster Access
+    visible: create_cluster
     variables:
       - ssh_public_key
       - create_bastion
@@ -150,6 +152,7 @@ variableGroups:
 
   - title: Cluster
     variables:
+      - create_cluster
       - compartment_ocid
       - cluster_name
       - kubernetes_version
@@ -161,6 +164,7 @@ variableGroups:
       - preferred_kubernetes_services
 
   - title: "Cluster Components"
+    visible: create_cluster
     variables:
       - deploy_node_feature_discovery
       - deploy_nvidia_gpu_operator
@@ -179,6 +183,7 @@ variableGroups:
       - install_nvidia_dra_driver
 
   - title: "Worker Pool: System"
+    visible: create_cluster
     variables:
       - worker_ops_ad
       - worker_ops_pool_size
@@ -197,6 +202,7 @@ variableGroups:
       - worker_ops_image_custom_id
       
   - title: "Worker Pool: CPU"
+    visible: create_cluster
     variables:
       - worker_cpu_enabled
       - worker_cpu_ad
@@ -218,6 +224,7 @@ variableGroups:
       - worker_cpu_image_custom_id
       
   - title: "Worker Pool: GPU"
+    visible: create_cluster
     variables:
       - worker_gpu_enabled
       - worker_gpu_ad
@@ -235,6 +242,7 @@ variableGroups:
       - worker_gpu_image_custom_id
 
   - title: "Worker Pool: GPU with RDMA"
+    visible: create_cluster
     variables:
       - worker_rdma_enabled
       - worker_rdma_ad
@@ -253,6 +261,7 @@ variableGroups:
       - worker_rdma_image_custom_id
 
   - title: "Workers: GPU Memory Cluster"
+    visible: create_cluster
     variables:
       - worker_gmc_enabled
       - worker_gmc_ad
@@ -268,6 +277,7 @@ variableGroups:
       - worker_gmc_scale_is_downsize_enabled
 
   - title: "Storage"
+    visible: create_cluster
     variables:
     - nvme_raid_enabled
     - nvme_raid_level
@@ -282,6 +292,7 @@ variableGroups:
     - lustre_mount_path
 
   - title: "Monitoring & Observability"
+    visible: create_cluster
     variables:
     - install_monitoring
     - monitoring_advanced_options
@@ -299,6 +310,7 @@ variableGroups:
     - setup_alerting
 
   - title: "Stack Configuration"
+    visible: create_cluster
     variables:
       - deploy_to_oke_from_orm
       - avoid_waiting_for_delete_target
@@ -1225,11 +1237,18 @@ variables:
       default: true
 
   # OKE Cluster Setup
+  create_cluster:
+    title: Create a Kubernetes cluster
+    description: Create the OKE cluster, worker pools, add-ons, monitoring, storage integrations, and cluster access components. Disable to deploy only the network scaffolding.
+    type: boolean
+    default: true
+    required: false
   cluster_name:
     type: string
     title: Cluster name prefix
     description: The Container Engine for Kubernetes cluster name.
     required: true
+    visible: create_cluster
   kubernetes_version:
     type: enum
     title: Kubernetes version
@@ -1240,6 +1259,7 @@ variables:
       - "v1.35.2"
       - "v1.34.2"
       - "v1.33.10"
+    visible: create_cluster
   control_plane_allowed_cidrs:
     title: Kubernetes endpoint allowed CIDRs
     description: List of CIDR ranges for allowed Kubernetes endpoint communication.
@@ -1250,6 +1270,7 @@ variables:
       pattern: "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\/(?:[0-2]?[0-9])|(?:3[0-2])$"
     unique_items: true
     minItems: 0
+    visible: create_cluster
   cni_type:
     title: CNI to use for pod networking
     description: CNI plugin to be used for pod communication on worker nodes.
@@ -1259,11 +1280,12 @@ variables:
     - VCN-Native Pod Networking
     - Flannel
     default: VCN-Native Pod Networking
+    visible: create_cluster
   control_plane_is_public:
     title: Create the Kubernetes control plane endpoint in a public subnet and assign it a public IP address
     type: boolean
     default: true
-    visible: true
+    visible: create_cluster
   max_pods_per_node:
     title: Maximum number of pods per node
     description: The default maximum number of pods to deploy per node when unspecified on a pool.
@@ -1276,6 +1298,7 @@ variables:
     default: "10.96.0.0/16"
     pattern: "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\/(?:1[6-9])|(?:2[0-9])|(?:30)$"
     required: false
+    visible: create_cluster
   preferred_kubernetes_services:
     type: enum
     enum:
@@ -1285,6 +1308,7 @@ variables:
     title: Preferred Load Balancer kind
     description: The kind of load balancers that should be provisioned by default for services of type Load Balancer.
     required: true
+    visible: create_cluster
   setup_credential_provider_for_ocir:
     title: Install Image Credential Provider for Container Registry (OCIR)
     description: Install the image credential provider so OKE worker nodes can authenticate with OCIR using instance principal authentication. If Create Policies is disabled, create a policy that allows worker nodes to read repositories in the compartment.
