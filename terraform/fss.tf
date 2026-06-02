@@ -3,7 +3,7 @@
 
 locals {
   fss_export_path = format("/oke-gpu-%v", local.state_id)
-  fss_ad          = coalesce(var.fss_ad, var.worker_ops_ad)
+  fss_ad          = local.create_fss ? coalesce(var.fss_ad, var.worker_ops_ad) : null
 }
 
 #export path picked from user input 

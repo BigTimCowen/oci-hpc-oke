@@ -46,10 +46,21 @@ locals {
 }
 
 resource "random_password" "grafana_admin_password" {
+  count = local.install_node_problem_detector_kube_prometheus_stack ? 1 : 0
+
   length           = 16
   min_lower        = 1
   min_upper        = 1
   min_numeric      = 1
   min_special      = 1
   override_special = "!#$%&*()-_=+[]:?"
+}
+
+moved {
+  from = random_password.grafana_admin_password
+  to   = random_password.grafana_admin_password[0]
+}
+
+locals {
+  grafana_admin_password = one(random_password.grafana_admin_password[*].result)
 }
