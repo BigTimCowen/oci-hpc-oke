@@ -111,7 +111,7 @@ output "grafana_url" {
 }
 
 output "grafana_admin_password" {
-  value = nonsensitive(random_password.grafana_admin_password.result)
+  value = local.grafana_admin_password_enabled ? nonsensitive(local.grafana_admin_password) : "N/A"
 }
 
 output "grafana_admin_username" {

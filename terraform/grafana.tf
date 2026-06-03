@@ -43,9 +43,14 @@ locals {
   } : {}
 
   grafana_alert_files_path = (var.install_monitoring && var.install_grafana && var.install_grafana_dashboards) ? [for f in local.grafana_alert_files : join("/", ["${local.grafana_alert_dir}", f])] : []
+
+  grafana_admin_password_enabled = alltrue([var.install_monitoring, var.install_node_problem_detector_kube_prometheus_stack])
+  grafana_admin_password         = one(random_password.grafana_admin_password[*].result)
 }
 
 resource "random_password" "grafana_admin_password" {
+  count = local.grafana_admin_password_enabled ? 1 : 0
+
   length           = 16
   min_lower        = 1
   min_upper        = 1

@@ -165,7 +165,7 @@ module "kube_prometheus_stack" {
     {
       grafana = merge(
         {
-          adminPassword = random_password.grafana_admin_password.result
+          adminPassword = local.grafana_admin_password
         },
         var.preferred_kubernetes_services == "internal" ?
         {
@@ -335,7 +335,7 @@ module "oke-ons-webhook" {
     deploy = {
       env = {
         ONS_TOPIC_OCID           = try(oci_ons_notification_topic.grafana_alerts[0].id, "")
-        GRAFANA_INITIAL_PASSWORD = base64encode(random_password.grafana_admin_password.result)
+        GRAFANA_INITIAL_PASSWORD = base64encode(local.grafana_admin_password)
         GRAFANA_SERVICE_URL      = "http://kube-prometheus-stack-grafana"
       }
     }
