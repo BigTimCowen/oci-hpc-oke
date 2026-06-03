@@ -199,11 +199,12 @@ data "cloudinit_config" "operator" {
         # https://cloudinit.readthedocs.io/en/latest/reference/modules.html#write-files
         write_files = [
           {
-            content = <<-EOT
-              source <(helm completion bash)
-              alias h='helm'
-            EOT
-            path    = "/tmp/helm.bashrc" # see 30-bashrc.yml for final move
+            content = join("\n", [
+              "source <(helm completion bash)",
+              "alias h='helm'",
+              "",
+            ])
+            path = "/tmp/helm.bashrc" # see 30-bashrc.yml for final move
           },
         ]
       })
@@ -274,16 +275,17 @@ data "cloudinit_config" "operator" {
       # https://cloudinit.readthedocs.io/en/latest/reference/modules.html#write-files
       write_files = [
         {
-          content = <<-EOT
-            export OCI_CLI_AUTH=instance_principal
-            export TERM=xterm-256color
-            export OCI_PYTHON_SDK_NO_SERVICE_IMPORTS=True
-            source <(kubectl completion bash)
-            alias k='kubectl'
-            alias ktx='kubectx'
-            alias kns='kubens'
-          EOT
-          path    = "/tmp/user.bashrc" # see 30-home.yml for final move
+          content = join("\n", [
+            "export OCI_CLI_AUTH=instance_principal",
+            "export TERM=xterm-256color",
+            "export OCI_PYTHON_SDK_NO_SERVICE_IMPORTS=True",
+            "source <(kubectl completion bash)",
+            "alias k='kubectl'",
+            "alias ktx='kubectx'",
+            "alias kns='kubens'",
+            "",
+          ])
+          path = "/tmp/user.bashrc" # see 30-home.yml for final move
         },
       ]
     })
