@@ -48,6 +48,11 @@ locals {
   grafana_admin_password         = one(random_password.grafana_admin_password[*].result)
 }
 
+moved {
+  from = random_password.grafana_admin_password
+  to   = random_password.grafana_admin_password[0]
+}
+
 resource "random_password" "grafana_admin_password" {
   count = local.grafana_admin_password_enabled ? 1 : 0
 
